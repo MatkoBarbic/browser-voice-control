@@ -58,6 +58,9 @@ from browser_use.telemetry.views import (
 )
 from browser_use.utils import check_env_variables, time_execution_async, time_execution_sync
 
+from pynput import keyboard as kb
+from threading import Thread, Event
+
 load_dotenv()
 logger = logging.getLogger(__name__)
 
@@ -85,6 +88,62 @@ Context = TypeVar('Context')
 
 AgentHookFunc = Callable[['Agent'], Awaitable[None]]
 
+class KeyboardListener:
+    def __init__(self, agent):
+        """
+        Initialize a keyboard listener that monitors for shift key presses using pynput.
+        
+        Args:
+            agent: The Agent instance to modify when shift is pressed
+        """
+        self.agent = agent
+        self.is_listening = False
+        self.stop_event = Event()
+        self.listener_thread = None
+        self.keyboard_listener = None
+    
+    def start(self):
+        """Start the keyboard listener in a separate thread."""
+        if not self.is_listening:
+            self.is_listening = True
+            self.stop_event.clear()
+            self.listener_thread = Thread(target=self._listen, daemon=True)
+            self.listener_thread.start()
+            print("Keyboard listener started - monitoring for shift key")
+    
+    def stop(self):
+        """Stop the keyboard listener."""
+        if self.is_listening:
+            self.is_listening = False
+            self.stop_event.set()
+            
+            # Stop the pynput listener if it exists
+            if self.keyboard_listener and self.keyboard_listener.is_alive():
+                self.keyboard_listener.stop()
+            
+            if self.listener_thread:
+                self.listener_thread.join(timeout=1.0)
+            
+            print("Keyboard listener stopped")
+    
+    def _listen(self):
+        """Thread function that listens for shift key presses."""
+        def on_press(key):
+            # Check if the key is either shift key
+            if key == kb.Key.shift or key == kb.Key.shift_r or key == kb.Key.shift_l:
+                print("\nShift key detected - stopping agent")
+                self.agent.state.stopped = True
+        
+        # Create and start the pynput listener
+        self.keyboard_listener = kb.Listener(on_press=on_press)
+        self.keyboard_listener.start()
+        
+        # Keep thread alive until stop_event is set
+        self.stop_event.wait()
+            
+        # Make sure to stop the listener when exiting
+        if self.keyboard_listener and self.keyboard_listener.is_alive():
+            self.keyboard_listener.stop()
 
 class Agent(Generic[Context]):
 	@time_execution_sync('--init (agent)')
@@ -189,6 +248,8 @@ class Agent(Generic[Context]):
 
 		# Initialize state
 		self.state = injected_agent_state or AgentState()
+
+		self.keyboard_listener = KeyboardListener(self)
 
 		# Action setup
 		self._setup_action_models()
@@ -780,7 +841,9 @@ class Agent(Generic[Context]):
 			exit_on_second_int=True,
 		)
 		signal_handler.register()
-
+		
+		self.keyboard_listener.start()
+		
 		# Wait for verification task to complete if it exists
 		if hasattr(self, '_verification_task') and not self._verification_task.done():
 			try:
@@ -852,6 +915,8 @@ class Agent(Generic[Context]):
 		finally:
 			# Unregister signal handlers before cleanup
 			signal_handler.unregister()
+
+			self.keyboard_listener.stop()
 
 			self.telemetry.capture(
 				AgentEndTelemetryEvent(
