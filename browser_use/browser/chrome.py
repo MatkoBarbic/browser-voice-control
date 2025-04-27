@@ -158,7 +158,7 @@ CHROME_ARGS = [
 	'--suppress-message-center-popups',
 	'--disable-client-side-phishing-detection',
 	'--disable-domain-reliability',
-	'--disable-component-update',
+	# '--disable-component-update',
 	'--disable-datasaver-prompt',
 	'--disable-hang-monitor',
 	'--disable-session-crashed-bubble',

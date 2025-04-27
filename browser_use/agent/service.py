@@ -58,6 +58,70 @@ from browser_use.telemetry.views import (
 )
 from browser_use.utils import check_env_variables, time_execution_async, time_execution_sync
 
+from pynput import keyboard as kb
+
+class KeyboardListener:
+ 
+
+    def __init__(self, agent):
+ 
+
+        self.agent = agent
+ 
+
+        self.listener = None
+ 
+
+        
+ 
+
+    def on_press(self, key):
+ 
+
+        try:
+ 
+
+            if key == kb.Key.shift_r or key == kb.Key.shift_l:
+ 
+
+                logger.info("Shift key pressed - stopping agent")
+ 
+
+                self.agent.state.stopped = True
+ 
+
+        except AttributeError:
+ 
+
+            pass
+ 
+
+            
+ 
+
+    def start(self):
+ 
+
+        if self.listener is None or not self.listener.running:
+ 
+
+            self.listener = kb.Listener(on_press=self.on_press)
+ 
+
+            self.listener.start()
+ 
+
+            
+ 
+
+    def stop(self):
+ 
+
+        if self.listener and self.listener.running:
+ 
+
+            self.listener.stop()
+ 
 load_dotenv()
 logger = logging.getLogger(__name__)
 
@@ -768,6 +832,10 @@ class Agent(Generic[Context]):
 		)
 		signal_handler.register()
 
+		if not hasattr(self, '_keyboard_listener'):
+			self._keyboard_listener = KeyboardListener(self)
+			self._keyboard_listener.start()
+
 		# Start non-blocking LLM connection verification
 		assert self.llm._verified_api_keys, 'Failed to verify LLM API keys'
 
@@ -815,6 +883,10 @@ class Agent(Generic[Context]):
 							continue
 
 					await self.log_completion()
+
+					if hasattr(self, '_keyboard_listener'):
+						self._keyboard_listener.stop()
+					
 					break
 			else:
 				logger.info('❌ Failed to complete task in maximum steps')
