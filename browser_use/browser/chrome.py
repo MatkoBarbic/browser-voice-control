@@ -54,7 +54,7 @@ CHROME_DISABLE_SECURITY_ARGS = [
 	'--disable-features=IsolateOrigins,site-per-process',
 	# '--allow-file-access-from-files',                     # <- WARNING, dangerous, allows JS to read filesystem using file:// URLs
 	# DANGER: Disable HTTPS verification
-	# '--allow-running-insecure-content',  # Breaks CORS/CSRF/HSTS etc., useful sometimes but very easy to detect
+	'--allow-running-insecure-content',  # Breaks CORS/CSRF/HSTS etc., useful sometimes but very easy to detect
 	'--ignore-certificate-errors',
 	'--ignore-ssl-errors',
 	'--ignore-certificate-errors-spki-list',
