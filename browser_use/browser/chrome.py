@@ -49,7 +49,7 @@ CHROME_DOCKER_ARGS = [
 CHROME_DISABLE_SECURITY_ARGS = [
 	# DANGER: JS isolation security features (to allow easier tampering with pages during automation)
 	# chrome://net-internals
-	'--disable-web-security',  # <- WARNING, breaks some sites that expect/enforce strict CORS headers (try webflow.com)
+	# '--disable-web-security',  # <- WARNING, breaks some sites that expect/enforce strict CORS headers (try webflow.com)
 	'--disable-site-isolation-trials',
 	'--disable-features=IsolateOrigins,site-per-process',
 	# '--allow-file-access-from-files',                     # <- WARNING, dangerous, allows JS to read filesystem using file:// URLs
